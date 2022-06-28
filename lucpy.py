@@ -21,8 +21,8 @@ default_plotions = {
 		#must be (row,column) order
 	"xscale": "linear",
 	"yscale": "linear",
-	"xlim": [],
-	"ylim": [],
+	"xlim": 'auto',
+	"ylim": 'auto',
 	"legends": [],
 		#should be a list whose first dimension corresponds to plots and 
 		#second dimension corresponds to different legend entries within 
@@ -37,6 +37,7 @@ default_plotions = {
 	"markerstyles": defaultmarkerstyles,
 	"markevery": "extrapolate",
 	#TODO
+	#test for different plots different x vals
 }		
 
 class plot():
@@ -98,10 +99,10 @@ class plot():
 		if self.plotsize == 0:
 			print("ERROR: shape of plot cannot be zero")
 
-		fig,axes = plt.subplots(nrows=self.plotshape[0],ncols=self.plotshape[1],figsize=self.figsize)
+		self.fig,self.axes = plt.subplots(nrows=self.plotshape[0],ncols=self.plotshape[1],figsize=self.figsize)
 		
 		if self.singleaxis:
-			axes = [axes]
+			self.axes = [self.axes]
 			xdata = np.array([xdata])
 		else:
 			#check if shape of x and y data given is the same
@@ -111,19 +112,19 @@ class plot():
 				for i in range(ydata.shape[0]):
 					temp_x.append(xdata)
 				xdata = np.array(temp_x)
-			axes = axes.flatten()
+			self.axes = self.axes.flatten()
 
-		self.plot_axes(fig,axes,xdata,ydata)
+		self.plot_axes(xdata,ydata)
 		
-		fig.tight_layout()
+		self.fig.tight_layout()
 		plt.show()
 
 	def extrapolate(self,xdata,ydata):
 		markevery = np.where(np.isnan(xdata),False,True).tolist()
 		
 		for xindex in range(xdata.shape[0]):
-
-			notnanindex = np.argwhere(~np.isnan(xdata[xindex]))[:,xindex]
+			# print(np.argwhere(~np.isnan(xdata[xindex]))[:,0])
+			notnanindex = np.argwhere(~np.isnan(xdata[xindex]))[:,0]
 
 			for ind in range(notnanindex.shape[0]-1):
 
@@ -168,43 +169,106 @@ class plot():
 		return xdata, ydata, markevery
 
 
-	def plot_axes(self,fig,axes,xdata,ydata):
+	def plot_axes(self,xdata,ydata):
 		if self.markevery == "extrapolate":
 			xdata,ydata,self.markevery = self.extrapolate(xdata,ydata) 
 
 		#make figsize a plotion in future
+		self.set_axes_limits(xdata,ydata)
 		for index in range(ydata.shape[0]):
 			if self.singleaxis:
 				xindex = 0
 			else:
 				xindex = index
 			styleindex = index%len(self.colors)
-			axes[xindex].plot(xdata[xindex],ydata[index], \
+			self.axes[xindex].plot(xdata[xindex],ydata[index], \
 				color=self.colors[styleindex], \
 				linestyle=self.linestyles[styleindex], \
 				marker=self.markerstyles[styleindex], \
-				markevery=self.markevery)
-			axes[xindex].set_title(self.plottitles[xindex])
-			axes[xindex].set_xlabel(self.xlabel)
-			axes[xindex].set_ylabel(self.ylabel)
-			axes[xindex].set_xscale(self.xscale)
-			axes[xindex].set_yscale(self.yscale)
+				markevery=self.markevery[xindex])
+
+			self.axes[xindex].set_title(self.plottitles[xindex])
+			self.axes[xindex].set_xlabel(self.xlabel)
+			self.axes[xindex].set_ylabel(self.ylabel)
+			self.axes[xindex].set_xscale(self.xscale)
+			self.axes[xindex].set_yscale(self.yscale)
 			# print([np.nanmin(xdata),np.nanmax(xdata)])
-			if len(self.xlim) == 0:
-				step = (np.nanmax(xdata)-np.nanmin(xdata))/10
-				axes[xindex].set_xlim([np.nanmin(xdata)-step,np.nanmax(xdata)+step])
-			else:
-				axes[xindex].set_xlim(self.xlim)
-			axes[xindex].set_ylim(self.ylim)
 
 			if len(self.legends) > xindex:
-				axes[xindex].legend(self.legends[xindex])
+				self.axes[xindex].legend(self.legends[xindex])
 			if self.gridlines:
 				# loc = plticker.MultipleLocator(base=self.gridspacing)
-				# axes[xindex].xaxis.set_major_locator(loc)
-				# axes[xindex].yaxis.set_major_locator(loc)
-				axes[xindex].grid(b=True, which='major', color='#666666', linestyle='-')
+				# self.axes[xindex].xaxis.set_major_locator(loc)
+				# self.axes[xindex].yaxis.set_major_locator(loc)
+				self.axes[xindex].grid(b=True, which='major', color='#666666', linestyle='-')
 
 		if not self.singleaxis:
-			fig.suptitle(self.title)
-		
+			self.fig.suptitle(self.title)
+
+	def set_axes_limits(self,xdata,ydata):
+
+		max_x = np.nan
+		min_x = np.nan
+		max_y = np.nan
+		min_y = np.nan
+		for index in range(ydata.shape[0]):
+			if self.singleaxis:
+				xindex = 0
+			else:
+				xindex = index
+			styleindex = index%len(self.colors)
+			if self.xlim == 'auto':
+				step = (np.nanmax(xdata[xindex])-np.nanmin(xdata[xindex]))/25
+				maxi = np.nanmax(xdata[xindex])
+				mini = np.nanmin(xdata[xindex])
+
+				if self.xscale == "log":
+					mincorrection = mini/5
+					maxcorrection = maxi/5
+				else:
+					mincorrection = step
+					maxcorrection = step
+				
+				if self.singleaxis:
+					if maxi > max_x or np.isnan(max_x):
+						max_x = maxi
+					if mini < min_x or np.isnan(min_x):
+						min_x = mini
+
+					xlim = [min_x-mincorrection,max_x+maxcorrection]
+				else:
+					xlim =	[mini-mincorrection,maxi+maxcorrection]
+				self.axes[xindex].set_xlim(xlim)
+			else:
+				self.axes[xindex].set_xlim(self.xlim)
+			
+			if self.ylim == 'auto':
+				print("dkfjhs")
+				step = (np.nanmax(ydata[index])-np.nanmin(ydata[index]))/25
+				maxi = np.nanmax(ydata[index])
+				mini = np.nanmin(ydata[index][ydata[index]>0])
+				if self.yscale == "log":
+					mincorrection = mini/5
+					maxcorrection = maxi/5
+				else:
+					mincorrection = step
+					maxcorrection = step
+
+				if self.singleaxis:
+					print(max_y,maxi)
+					if maxi > max_y or np.isnan(max_y):
+						max_y = maxi
+					if mini < min_y or np.isnan(min_y):
+						min_y = mini
+
+					ylim = [min_y-mincorrection,max_y+maxcorrection]
+					print(ylim[1])
+				else:
+					ylim =[mini-mincorrection,maxi+maxcorrection]
+				for i in range(ydata.shape[0]):
+					self.axes[i].set_ylim(ylim)
+			else:
+				self.axes[xindex].set_ylim(self.ylim)
+			
+			# print(xlim)
+			# print(ylim)

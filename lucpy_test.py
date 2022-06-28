@@ -30,7 +30,7 @@ test_plotions1 = {
 	"plottitles": ["1","2","3","4"],
 		#needs to be a list even if just one title
 		#if singleaxis is true then this will be overall title
-	"ylim": [0.0001,1.1],
+	# "ylim": [0.0001,1.1],
 	"xlabel": "x axis",
 	"ylabel": "y axis",
 	"singleaxis": True,
@@ -40,7 +40,7 @@ test_plotions1 = {
 	"xscale": "linear",
 	"yscale": "log",
 	"fontsize": 25,
-	"legends": [["pooty"],["skaa"],["ba"],["b"]],
+	"legends": [["pooty","skaa","ba","b"]],
 	# "legends": [["pooty","skaa","ba","b"]],
 		#should be a list whose first dimension corresponds to plots and 
 		#second dimension corresponds to different legend entries within 
